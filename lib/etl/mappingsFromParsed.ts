@@ -1,24 +1,31 @@
 import { uniquePaths, flattenJson } from "./flatten";
 import type { MappingRule, ParsedData } from "./types";
 
-const MAX_PATHS = 2000;
-
 export function buildInitialMappings(parsed: ParsedData): MappingRule[] {
     if (parsed.kind === "tabular") {
-        return parsed.headers.map((h) => ({ original: h, remapped: "" }));
+        return parsed.headers.map((h) => ({ original: h, remapped: "", transform: "" }));
     }
     if (parsed.kind === "json" || parsed.kind === "xml") {
-        const flat = uniquePaths(flattenJson(parsed.data));
-        const list = flat.slice(0, MAX_PATHS);
-        return list.map((f) => ({ original: f.path, remapped: "" }));
+        const list = uniquePaths(flattenJson(parsed.data));
+        return list.map((f) => ({ original: f.path, remapped: "", transform: "" }));
     }
     return [];
 }
 
-export function hasMorePathsThan(parsed: ParsedData, limit: number): boolean {
+export function countHierarchicalPaths(parsed: ParsedData): number {
     if (parsed.kind === "json" || parsed.kind === "xml") {
-        const n = uniquePaths(flattenJson(parsed.data)).length;
-        return n > limit;
+        return uniquePaths(flattenJson(parsed.data)).length;
+    }
+    if (parsed.kind === "tabular") {
+        return parsed.headers.length;
+    }
+    return 0;
+}
+
+export function hasMorePathsThan(parsed: ParsedData, limit: number): boolean {
+    if (limit <= 0) return false;
+    if (parsed.kind === "json" || parsed.kind === "xml") {
+        return countHierarchicalPaths(parsed) > limit;
     }
     if (parsed.kind === "tabular") {
         return parsed.headers.length > limit;

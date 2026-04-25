@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Download, Redo, Save, Sun, Undo, Upload, Moon, FileJson, Table2 } from "lucide-react";
+import { Download, Redo, Save, Sun, Undo, Upload, Moon, FileJson, Table2, Loader2, Plus } from "lucide-react";
 import {
     type ExportFormat,
     type MappingRule,
@@ -13,9 +13,11 @@ import {
     parseTextContent,
     parseArrayBuffer,
     buildInitialMappings,
-    hasMorePathsThan,
     buildPreview,
     exportData,
+    flattenJsonYielding,
+    uniquePaths,
+    getByPath,
 } from "@/lib/etl";
 import { cn } from "@/lib/utils";
 
@@ -68,13 +70,19 @@ export function DataMapper({ initialText, fileLabel, fileUrl, initialParsed }: D
     const [exportFormat, setExportFormat] = useState<ExportFormat>("json");
     const [preview, setPreview] = useState("");
     const [error, setError] = useState<string | null>(null);
-    const [etlOptions, setEtlOptions] = useState<EtlOptions>(defaultEtlOptions);
+    const [etlOptions, setEtlOptions] = useState<EtlOptions>(() => ({ ...defaultEtlOptions, tableRowFilter: "" }));
     const [darkMode, setDarkMode] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
 
     const [mappingHistory, setMappingHistory] = useState<MappingRule[][]>([]);
     const [historyIndex, setHistoryIndex] = useState(0);
     const historyIndexRef = useRef(0);
+
+    const [pathIndexLoading, setPathIndexLoading] = useState(false);
+    const [pathIndexProgress, setPathIndexProgress] = useState(0);
+    const [pathIndexTotal, setPathIndexTotal] = useState(0);
+    const [customPathInput, setCustomPathInput] = useState("");
+
 
     useEffect(() => {
         historyIndexRef.current = historyIndex;
@@ -88,24 +96,39 @@ export function DataMapper({ initialText, fileLabel, fileUrl, initialParsed }: D
         setActiveFileName(fileLabel);
     }, [initialText, fileLabel]);
 
-    const applyParsed = useCallback((p: ParsedData) => {
-        setParsed(p);
-        if (p.kind === "unknown") {
-            setError(
-                p.hint
-                    ? `Could not read structured data: ${p.hint}`
-                    : "Unrecognized file format. Try CSV, TSV, JSON, XML, XLSX, or JSON Lines."
-            );
-        } else {
-            setError(null);
-        }
-        const initial = buildInitialMappings(p);
+    const applyMappingsAndHistory = useCallback((initial: MappingRule[]) => {
         setMappings(initial);
         mappingsRef.current = initial;
         setMappingHistory([initial.map((m) => ({ ...m }))]);
         setHistoryIndex(0);
         historyIndexRef.current = 0;
     }, []);
+
+    const applyParsed = useCallback(
+        (p: ParsedData) => {
+            setParsed(p);
+            if (p.kind === "unknown") {
+                setError(
+                    p.hint
+                        ? `Could not read structured data: ${p.hint}`
+                        : "Unrecognized file format. Try CSV, TSV, JSON, XML, XLSX, or JSON Lines."
+                );
+            } else {
+                setError(null);
+            }
+            if (p.kind === "tabular") {
+                const initial = buildInitialMappings(p);
+                applyMappingsAndHistory(initial);
+                setPathIndexLoading(false);
+                setPathIndexProgress(0);
+                setPathIndexTotal(0);
+            } else {
+                setMappings([]);
+                mappingsRef.current = [];
+            }
+        },
+        [applyMappingsAndHistory]
+    );
 
     useEffect(() => {
         if (isBinarySource) {
@@ -138,6 +161,37 @@ export function DataMapper({ initialText, fileLabel, fileUrl, initialParsed }: D
     }, [fileText, activeFileName, isBinarySource, applyParsed]);
 
     useEffect(() => {
+        if (!parsed) return;
+        if (parsed.kind !== "json" && parsed.kind !== "xml") return;
+        if (isBinarySource) return;
+
+        let cancelled = false;
+        setPathIndexLoading(true);
+        setPathIndexProgress(0);
+        setPathIndexTotal(0);
+        setMappings([]);
+
+        void (async () => {
+            const flat = await flattenJsonYielding(
+                parsed.data,
+                (n) => {
+                    if (!cancelled) setPathIndexProgress(n);
+                }
+            );
+            if (cancelled) return;
+            const u = uniquePaths(flat);
+            if (cancelled) return;
+            setPathIndexTotal(u.length);
+            setPathIndexLoading(false);
+            const initial = u.map((f) => ({ original: f.path, remapped: "", transform: "" }));
+            applyMappingsAndHistory(initial);
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [parsed, isBinarySource, fileText, activeFileName, applyMappingsAndHistory]);
+
+    useEffect(() => {
         if (!parsed || parsed.kind === "unknown") {
             setPreview("");
             return;
@@ -150,8 +204,7 @@ export function DataMapper({ initialText, fileLabel, fileUrl, initialParsed }: D
         [mappings]
     );
 
-    const setRemapForOriginal = useCallback((original: string, remapped: string) => {
-        const next = mappingsRef.current.map((m) => (m.original === original ? { ...m, remapped } : m));
+    const commitMappingChange = useCallback((next: MappingRule[]) => {
         mappingsRef.current = next;
         setMappings(next);
         const headIdx = historyIndexRef.current;
@@ -163,19 +216,58 @@ export function DataMapper({ initialText, fileLabel, fileUrl, initialParsed }: D
         });
     }, []);
 
+    const setRemapForOriginal = useCallback(
+        (original: string, remapped: string) => {
+            const next = mappingsRef.current.map((m) => (m.original === original ? { ...m, remapped } : m));
+            commitMappingChange(next);
+        },
+        [commitMappingChange]
+    );
+
+    const setTransformForOriginal = useCallback(
+        (original: string, transform: string) => {
+            const next = mappingsRef.current.map((m) =>
+                m.original === original ? { ...m, transform } : m
+            );
+            commitMappingChange(next);
+        },
+        [commitMappingChange]
+    );
+
+    const addCustomSourcePath = useCallback(() => {
+        const p = customPathInput.trim();
+        if (!p) return;
+        if (!parsed || (parsed.kind !== "json" && parsed.kind !== "xml")) {
+            return;
+        }
+        const v = getByPath(parsed.data, p);
+        if (v === undefined) {
+            setError(`Path not found in data: ${p}`);
+            return;
+        }
+        setError(null);
+        if (mappingsRef.current.some((m) => m.original === p)) {
+            setCustomPathInput("");
+            return;
+        }
+        const newRow: MappingRule = { original: p, remapped: "", transform: "" };
+        const next = [...mappingsRef.current, newRow];
+        commitMappingChange(next);
+        setCustomPathInput("");
+    }, [customPathInput, parsed, commitMappingChange]);
+
     const filtered = useMemo(() => {
         const s = searchTerm.toLowerCase();
         if (!s) return mappings;
         return mappings.filter(
-            (m) => m.original.toLowerCase().includes(s) || m.remapped.toLowerCase().includes(s)
+            (m) =>
+                m.original.toLowerCase().includes(s) ||
+                m.remapped.toLowerCase().includes(s) ||
+                (m.transform ?? "").toLowerCase().includes(s)
         );
     }, [mappings, searchTerm]);
 
     const summary = useMemo(() => (parsed && parsed.kind !== "unknown" ? describeParsed(parsed) : null), [parsed]);
-    const pathsTruncated = useMemo(
-        () => (parsed && parsed.kind !== "unknown" ? hasMorePathsThan(parsed, 2000) : false),
-        [parsed]
-    );
 
     const sourceDisplay = useMemo(() => {
         if (sourceNote) {
@@ -257,15 +349,26 @@ export function DataMapper({ initialText, fileLabel, fileUrl, initialParsed }: D
                 const arr = JSON.parse(data) as MappingRule[];
                 if (
                     !Array.isArray(arr) ||
-                    !arr.every((m) => m && typeof m.original === "string" && typeof m.remapped === "string")
+                    !arr.every(
+                        (m) =>
+                            m &&
+                            typeof m.original === "string" &&
+                            typeof m.remapped === "string" &&
+                            (m.transform == null || typeof m.transform === "string")
+                    )
                 ) {
                     setError("Invalid mapping file.");
                     return;
                 }
                 setError(null);
-                mappingsRef.current = arr;
-                setMappings(arr);
-                setMappingHistory([arr.map((m) => ({ ...m }))]);
+                const norm = arr.map((m) => ({
+                    original: m.original,
+                    remapped: m.remapped,
+                    transform: m.transform ?? "",
+                }));
+                mappingsRef.current = norm;
+                setMappings(norm);
+                setMappingHistory([norm.map((m) => ({ ...m }))]);
                 setHistoryIndex(0);
                 historyIndexRef.current = 0;
             } catch {
@@ -462,20 +565,53 @@ export function DataMapper({ initialText, fileLabel, fileUrl, initialParsed }: D
                 </div>
             </div>
 
-            {pathsTruncated && (
+            {parsed && (parsed.kind === "json" || parsed.kind === "xml") && pathIndexLoading && (
+                <p className="text-muted-foreground flex items-center gap-2 text-xs">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Indexing tree… {pathIndexProgress.toLocaleString()} field path(s) found so far
+                </p>
+            )}
+            {parsed && (parsed.kind === "json" || parsed.kind === "xml") && !pathIndexLoading && pathIndexTotal > 0 && (
                 <p className="text-xs text-muted-foreground">
-                    More than 2000 paths were detected; only the first 2000 are shown. For very wide feeds, prefer a tabular export
-                    (CSV) or split the file.
+                    Indexed <strong className="text-foreground font-medium">{pathIndexTotal.toLocaleString()}</strong> unique field
+                    path(s). Add a path below if the auto-list missed one.
                 </p>
             )}
 
             <div>
                 <h2 className="mb-3 text-sm font-medium">Field mapping</h2>
                 <p className="mb-3 text-xs text-muted-foreground">
-                    <strong>Tabular:</strong> target column name per source column. <strong>JSON / XML:</strong> set a dot path (e.g.{" "}
-                    <code className="rounded bg-zinc-800 px-1">customer.id</code>); arrays use numeric segments (e.g.{" "}
-                    <code className="rounded bg-zinc-800 px-1">items.0.sku</code>). Leave target empty to keep the same name.
+                    <strong>Target:</strong> new column (tabular) or dot path. <strong>Transform (Jexl):</strong> optional per-field
+                    expression. Context: <code className="rounded bg-zinc-800 px-1">value</code>,{" "}
+                    <code className="rounded bg-zinc-800 px-1">row</code> / <code className="rounded bg-zinc-800 px-1">c</code> (tabular),
+                    or <code className="rounded bg-zinc-800 px-1">at(&quot;path&quot;)</code> and <code className="rounded bg-zinc-800 px-1">root</code>{" "}
+                    (hierarchical). Examples: <code className="text-[10px]">value|toNumber*1.1</code>,{" "}
+                    <code className="text-[10px]">value|trim|upper|default(0)</code>.
                 </p>
+                {parsed && (parsed.kind === "json" || parsed.kind === "xml") && !pathIndexLoading && (
+                    <div className="mb-3 flex max-w-2xl flex-col gap-2 sm:flex-row sm:items-end">
+                        <div className="min-w-0 flex-1">
+                            <label htmlFor="add-path" className="text-xs text-muted-foreground">
+                                Add source path
+                            </label>
+                            <input
+                                id="add-path"
+                                value={customPathInput}
+                                onChange={(e) => setCustomPathInput(e.target.value)}
+                                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addCustomSourcePath())}
+                                placeholder="e.g. items.0.externalId"
+                                className={cn(
+                                    "mt-1 w-full rounded-md border px-2 py-1.5 text-xs",
+                                    darkMode ? "border-zinc-600 bg-zinc-900" : "border-zinc-300"
+                                )}
+                            />
+                        </div>
+                        <Button type="button" variant="secondary" className="shrink-0" onClick={addCustomSourcePath}>
+                            <Plus className="mr-1 h-3.5 w-3.5" />
+                            Add
+                        </Button>
+                    </div>
+                )}
                 <input
                     type="search"
                     placeholder="Filter fields…"
@@ -487,17 +623,29 @@ export function DataMapper({ initialText, fileLabel, fileUrl, initialParsed }: D
                     )}
                 />
                 <div className="max-h-[min(50vh,28rem)] overflow-auto rounded-lg border border-border/50">
-                    <table className="w-full min-w-[280px] text-left text-sm">
-                        <thead className="sticky top-0 bg-inherit text-xs text-muted-foreground">
+                    <div className="w-full min-w-0 max-w-full overflow-x-auto">
+                        <table className="w-full min-w-[520px] text-left text-sm">
+                        <thead className="sticky top-0 z-[1] bg-inherit text-xs text-muted-foreground">
                             <tr>
                                 <th className="border-b px-2 py-2">Source</th>
                                 <th className="border-b px-2 py-2">Target (export name / path)</th>
+                                <th className="border-b px-2 py-2 min-w-[140px]">Transform (Jexl)</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {filtered.map((mapping) => (
+                            {pathIndexLoading && (!parsed || parsed.kind === "json" || parsed.kind === "xml") && (
+                                <tr>
+                                    <td colSpan={3} className="text-muted-foreground px-2 py-4 text-sm">
+                                        Building field list from JSON/XML…
+                                    </td>
+                                </tr>
+                            )}
+                            {!pathIndexLoading &&
+                                filtered.map((mapping) => (
                                 <tr key={mapping.original} className="border-b border-border/30 last:border-0">
-                                    <td className="break-all px-2 py-1.5 font-mono text-xs">{mapping.original}</td>
+                                    <td className="max-w-[min(12rem,28vw)] break-all px-2 py-1.5 font-mono text-xs">
+                                        {mapping.original}
+                                    </td>
                                     <td className="px-2 py-1.5">
                                         <input
                                             type="text"
@@ -511,15 +659,45 @@ export function DataMapper({ initialText, fileLabel, fileUrl, initialParsed }: D
                                             )}
                                         />
                                     </td>
+                                    <td className="px-2 py-1.5">
+                                        <input
+                                            type="text"
+                                            title="Jexl transform (optional)"
+                                            value={getMappingByOriginal(mapping.original)?.transform ?? ""}
+                                            placeholder="(optional)"
+                                            onChange={(e) => setTransformForOriginal(mapping.original, e.target.value)}
+                                            className={cn(
+                                                "w-full min-w-[7rem] rounded border px-2 py-1.5 text-xs",
+                                                darkMode ? "border-zinc-600 bg-zinc-900" : "border-zinc-300"
+                                            )}
+                                        />
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
+                    </div>
                 </div>
             </div>
 
             <div>
-                <h3 className="mb-2 text-sm font-medium">Row options (tabular)</h3>
+                <h3 className="mb-2 text-sm font-medium">Row options (tabular &amp; JSONL)</h3>
+                <div className="mb-3 max-w-2xl">
+                    <label htmlFor="row-filter" className="text-xs text-muted-foreground">
+                        Keep rows where (Jexl) — use <code className="text-foreground">c</code> or <code className="text-foreground">row</code>{" "}
+                        to access column values, <code className="text-foreground">i</code> for row index. Example: <code className="text-foreground">c.status == &apos;active&apos;</code> or <code className="text-foreground">c[&quot;Total&quot;] &gt; 0</code>
+                    </label>
+                    <input
+                        id="row-filter"
+                        value={etlOptions.tableRowFilter ?? ""}
+                        onChange={(e) => setEtlOptions((o) => ({ ...o, tableRowFilter: e.target.value }))}
+                        className={cn(
+                            "mt-1.5 w-full rounded-md border px-2 py-1.5 font-mono text-xs",
+                            darkMode ? "border-zinc-600 bg-zinc-900" : "border-zinc-200"
+                        )}
+                        placeholder="(optional, leave empty for all rows)"
+                    />
+                </div>
                 <div className="flex flex-col gap-2 sm:flex-row sm:gap-6">
                     <label className="flex items-center gap-2 text-sm">
                         <input

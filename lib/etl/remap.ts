@@ -6,11 +6,22 @@ import type { EtlOptions, ExportFormat, MappingRule, ParsedData, TabularRow, Tab
 import { defaultEtlOptions } from "./types";
 import { getByPath, buildObjectFromPaths } from "./nested";
 import { isPlainObject } from "./flatten";
+import { evalTableTransformToValue, evalTableRowFilterExpr, evalJsonTransformToValue } from "./expr";
 
 function normalizeKey(key: string, options: EtlOptions): string {
     let k = key;
     if (options.trimWhitespace) k = k.trim();
     return k;
+}
+
+function toTabularCell(v: unknown): TabularValue {
+    if (v === null || v === undefined) return null;
+    if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") return v;
+    try {
+        return JSON.stringify(v);
+    } catch {
+        return String(v);
+    }
 }
 
 function getTabularValue(row: TabularRow, key: string, options: EtlOptions): TabularValue {
@@ -35,20 +46,46 @@ function getTabularValue(row: TabularRow, key: string, options: EtlOptions): Tab
     return null;
 }
 
+function rowFilterExpr(o: EtlOptions): string {
+    return (o.tableRowFilter ?? o.rowFilter ?? "").trim();
+}
+
 export function applyMappingsTabular(
     rows: TabularRow[],
     mappings: MappingRule[],
     options: EtlOptions
 ): TabularRow[] {
-    return rows.map((row) => {
+    const filterStr = rowFilterExpr(options);
+    const rowObjs = rows as unknown as Record<string, unknown>[];
+    const afterFilter = filterStr
+        ? rowObjs.filter((row, i) => {
+              try {
+                  return evalTableRowFilterExpr(filterStr, row, i, !options.caseSensitive);
+              } catch {
+                  return true;
+              }
+          })
+        : rowObjs;
+
+    return afterFilter.map((row, rowIndex) => {
         const newRow: TabularRow = {};
         for (const m of mappings) {
             const orig = normalizeKey(m.original, options);
-            const v = getTabularValue(row, m.original, options);
+            const raw = getTabularValue(row as TabularRow, m.original, options);
+            let v: unknown = raw;
+            const t = (m.transform ?? "").trim();
+            if (t) {
+                try {
+                    v = evalTableTransformToValue(t, raw, m.original, row, rowIndex, !options.caseSensitive);
+                } catch {
+                    v = raw;
+                }
+            }
+            const cell = toTabularCell(v);
             if (m.remapped.trim() === "") {
-                newRow[orig] = v;
+                newRow[orig] = cell;
             } else {
-                newRow[normalizeKey(m.remapped, { ...options, caseSensitive: true })] = v;
+                newRow[normalizeKey(m.remapped, { ...options, caseSensitive: true })] = cell;
             }
         }
         return newRow;
@@ -59,8 +96,17 @@ export function applyMappingsJson(data: unknown, mappings: MappingRule[]): unkno
     const pairs: { path: string; value: unknown }[] = [];
     for (const m of mappings) {
         if (!m.original) continue;
-        const value = getByPath(data, m.original);
-        if (value === undefined) continue;
+        const value0 = getByPath(data, m.original);
+        if (value0 === undefined) continue;
+        let value: unknown = value0;
+        const t = (m.transform ?? "").trim();
+        if (t) {
+            try {
+                value = evalJsonTransformToValue(t, value0, data, m.original);
+            } catch {
+                value = value0;
+            }
+        }
         const path = m.remapped.trim() || m.original;
         pairs.push({ path, value });
     }

@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 const formats = [
     { name: "JSON", note: "Arrays or objects; good for APIs and archives." },
     { name: "CSV / TSV", note: "Tabular exports; matches spreadsheet analysis workflows." },
-    { name: "JSON Lines", note: "One object per line; good for log-style or streaming inputs." },
+    { name: "JSON Lines", note: "One object per line; good for log-style or streaming inputs. Row filter applies." },
     { name: "YAML", note: "Human-readable; useful for config-shaped outputs." },
-    { name: "XML", note: "Vendor feeds and legacy systems; first sheet row becomes rows in tabular mode." },
+    { name: "XML", note: "Vendor feeds and legacy systems; tabular rows wrap in records/row in XML." },
     { name: "Excel (.xlsx)", note: "From tabular or JSON object arrays; binary download." },
 ];
 
@@ -21,8 +21,8 @@ export function ExportOptions() {
                 ))}
             </ul>
             <p className="text-sm text-muted-foreground">
-                Mappings are saved as JSON (Load / Save mapping on the map screen) so you can reapply the same vendor-to-internal field map
-                on every import run.
+                Mappings (including <strong className="text-foreground">Jexl</strong> transforms) are saved as JSON so you can reapply
+                the same map on every import. Row-level filters and per-field expressions run entirely in the browser.
             </p>
             <Button asChild>
                 <Link href="/">Start mapping a file</Link>

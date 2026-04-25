@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { DataMapper } from "@/components/DataMapper";
 import { Loader2 } from "lucide-react";
-import { takeRemapSession } from "@/lib/remapSession";
+import { takeRemapPayload } from "@/lib/remapPayloadStore";
 import type { ParsedData } from "@/lib/etl";
 import { parseArrayBuffer } from "@/lib/etl";
 
@@ -25,6 +25,7 @@ export function RemapContent() {
     const fileUrl = searchParams.get("fileUrl");
     const nameParam = searchParams.get("name");
     const isLocal = searchParams.get("source") === "local";
+    const idbKey = searchParams.get("key");
 
     const [text, setText] = useState<string | null>(null);
     const [label, setLabel] = useState(nameParam || "document");
@@ -64,9 +65,11 @@ export function RemapContent() {
             setErr(null);
             setPreParsed(null);
             setFromUrl(undefined);
-            const s = takeRemapSession();
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
+            void (async () => {
+            const s = await takeRemapPayload(idbKey);
             if (!s) {
-                setErr("No file in session. Choose a file from the home page, or use Replace file below after opening this page with data.");
+                setErr("No file in handoff. Choose a file on the home page, or use Replace file here.");
                 setText("");
                 setLoading(false);
                 return;
@@ -81,10 +84,11 @@ export function RemapContent() {
                     const ab = base64ToArrayBuffer(s.base64);
                     setPreParsed(parseArrayBuffer(ab, s.fileName));
                 } catch (e) {
-                    setErr(e instanceof Error ? e.message : "Failed to read Excel from session.");
+                    setErr(e instanceof Error ? e.message : "Failed to read Excel from storage.");
                 }
             }
             setLoading(false);
+            })();
             return;
         }
 
@@ -97,7 +101,7 @@ export function RemapContent() {
             setFromUrl(undefined);
             setLoading(false);
         }
-    }, [fileUrl, isLocal, load]);
+    }, [fileUrl, isLocal, idbKey, load]);
 
     if (loading) {
         return (
