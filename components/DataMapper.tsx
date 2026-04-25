@@ -20,6 +20,8 @@ import {
     getByPath,
 } from "@/lib/etl";
 import { cn } from "@/lib/utils";
+import { TransformPresetSelect } from "@/components/TransformPresetSelect";
+import { TRANSFORM_PRESETS, ROW_FILTER_PRESETS } from "@/lib/etl/transformPresets";
 
 interface DataMapperProps {
     initialText: string;
@@ -233,6 +235,27 @@ export function DataMapper({ initialText, fileLabel, fileUrl, initialParsed }: D
         },
         [commitMappingChange]
     );
+
+    const applyTransformPreset = useCallback(
+        (original: string, jexl: string) => {
+            const cur = (mappingsRef.current.find((m) => m.original === original)?.transform ?? "").trim();
+            if (!cur) {
+                setTransformForOriginal(original, jexl);
+                return;
+            }
+            // Chain: presets are "value|a|b"; only append the tail after leading "value|"
+            const tail = jexl.replace(/^\s*value\s*\|\s*/i, "");
+            setTransformForOriginal(original, tail ? `${cur}|${tail}` : `${cur}|${jexl.trim()}`);
+        },
+        [setTransformForOriginal]
+    );
+
+    const applyRowFilterPreset = useCallback((jexl: string) => {
+        setEtlOptions((o) => {
+            const cur = (o.tableRowFilter ?? "").trim();
+            return { ...o, tableRowFilter: cur ? `${cur} && (${jexl})` : jexl };
+        });
+    }, []);
 
     const addCustomSourcePath = useCallback(() => {
         const p = customPathInput.trim();
@@ -624,12 +647,12 @@ export function DataMapper({ initialText, fileLabel, fileUrl, initialParsed }: D
                 />
                 <div className="max-h-[min(50vh,28rem)] overflow-auto rounded-lg border border-border/50">
                     <div className="w-full min-w-0 max-w-full overflow-x-auto">
-                        <table className="w-full min-w-[520px] text-left text-sm">
+                        <table className="w-full min-w-[560px] text-left text-sm">
                         <thead className="sticky top-0 z-[1] bg-inherit text-xs text-muted-foreground">
                             <tr>
                                 <th className="border-b px-2 py-2">Source</th>
                                 <th className="border-b px-2 py-2">Target (export name / path)</th>
-                                <th className="border-b px-2 py-2 min-w-[140px]">Transform (Jexl)</th>
+                                <th className="border-b px-2 py-2 min-w-[180px]">Transform (Jexl) + insert</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -660,17 +683,31 @@ export function DataMapper({ initialText, fileLabel, fileUrl, initialParsed }: D
                                         />
                                     </td>
                                     <td className="px-2 py-1.5">
-                                        <input
-                                            type="text"
-                                            title="Jexl transform (optional)"
-                                            value={getMappingByOriginal(mapping.original)?.transform ?? ""}
-                                            placeholder="(optional)"
-                                            onChange={(e) => setTransformForOriginal(mapping.original, e.target.value)}
-                                            className={cn(
-                                                "w-full min-w-[7rem] rounded border px-2 py-1.5 text-xs",
-                                                darkMode ? "border-zinc-600 bg-zinc-900" : "border-zinc-300"
-                                            )}
-                                        />
+                                        <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center">
+                                            <TransformPresetSelect
+                                                presets={TRANSFORM_PRESETS}
+                                                onPick={(jexl) => applyTransformPreset(mapping.original, jexl)}
+                                                className={cn(
+                                                    "sm:w-28",
+                                                    darkMode
+                                                        ? "border-zinc-600 bg-zinc-900/80"
+                                                        : "border-zinc-300 bg-zinc-50"
+                                                )}
+                                                size="sm"
+                                                aria-label={`Insert preset for ${mapping.original}`}
+                                            />
+                                            <input
+                                                type="text"
+                                                title="Jexl transform (optional). Choose Insert to append a preset."
+                                                value={getMappingByOriginal(mapping.original)?.transform ?? ""}
+                                                placeholder="(optional)"
+                                                onChange={(e) => setTransformForOriginal(mapping.original, e.target.value)}
+                                                className={cn(
+                                                    "min-w-0 flex-1 rounded border px-2 py-1.5 text-xs",
+                                                    darkMode ? "border-zinc-600 bg-zinc-900" : "border-zinc-300"
+                                                )}
+                                            />
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -683,16 +720,28 @@ export function DataMapper({ initialText, fileLabel, fileUrl, initialParsed }: D
             <div>
                 <h3 className="mb-2 text-sm font-medium">Row options (tabular &amp; JSONL)</h3>
                 <div className="mb-3 max-w-2xl">
-                    <label htmlFor="row-filter" className="text-xs text-muted-foreground">
-                        Keep rows where (Jexl) — use <code className="text-foreground">c</code> or <code className="text-foreground">row</code>{" "}
-                        to access column values, <code className="text-foreground">i</code> for row index. Example: <code className="text-foreground">c.status == &apos;active&apos;</code> or <code className="text-foreground">c[&quot;Total&quot;] &gt; 0</code>
-                    </label>
+                    <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                        <label htmlFor="row-filter" className="text-xs text-muted-foreground">
+                            Keep rows where (Jexl) — <code className="text-foreground">c</code> / <code className="text-foreground">row</code>{" "}
+                            for cells, <code className="text-foreground">i</code> for index
+                        </label>
+                        <TransformPresetSelect
+                            presets={ROW_FILTER_PRESETS}
+                            onPick={applyRowFilterPreset}
+                            className={cn(
+                                "max-w-[16rem]",
+                                darkMode ? "border-zinc-600 bg-zinc-900/80" : "border-zinc-300 bg-zinc-50"
+                            )}
+                            size="sm"
+                            aria-label="Insert row-filter preset (appends with && if already set)"
+                        />
+                    </div>
                     <input
                         id="row-filter"
                         value={etlOptions.tableRowFilter ?? ""}
                         onChange={(e) => setEtlOptions((o) => ({ ...o, tableRowFilter: e.target.value }))}
                         className={cn(
-                            "mt-1.5 w-full rounded-md border px-2 py-1.5 font-mono text-xs",
+                            "w-full rounded-md border px-2 py-1.5 font-mono text-xs",
                             darkMode ? "border-zinc-600 bg-zinc-900" : "border-zinc-200"
                         )}
                         placeholder="(optional, leave empty for all rows)"

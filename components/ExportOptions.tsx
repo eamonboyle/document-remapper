@@ -22,7 +22,8 @@ export function ExportOptions() {
             </ul>
             <p className="text-sm text-muted-foreground">
                 Mappings (including <strong className="text-foreground">Jexl</strong> transforms) are saved as JSON so you can reapply
-                the same map on every import. Row-level filters and per-field expressions run entirely in the browser.
+                the same map on every import. On the map screen, use the <strong className="text-foreground">Insert</strong> dropdowns
+                next to each transform and the row filter to paste common expressions, then edit as needed.
             </p>
             <Button asChild>
                 <Link href="/">Start mapping a file</Link>

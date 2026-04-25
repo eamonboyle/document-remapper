@@ -13,5 +13,6 @@ export { detectKindFromName, detectKindFromTextSample } from "./detect";
 export { buildInitialMappings, hasMorePathsThan, countHierarchicalPaths } from "./mappingsFromParsed";
 export { uniquePaths, flattenJsonYielding } from "./flatten";
 export { getByPath } from "./nested";
+export { TRANSFORM_PRESETS, ROW_FILTER_PRESETS, PRESET_CHOOSE, type TransformPreset } from "./transformPresets";
 export { exportData, applyMappingsTabular, applyMappingsJson } from "./remap";
 export { buildPreview } from "./preview";
