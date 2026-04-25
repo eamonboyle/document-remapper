@@ -8,10 +8,9 @@ export function FileUpload() {
         <UploadButton
             endpoint="documentUploader"
             onClientUploadComplete={(res) => {
-                console.log("Files: ", res);
                 if (res && res[0]) {
-                    // Redirect to the remapper page with the file URL as a query parameter
-                    router.push(`/remap?fileUrl=${encodeURIComponent(res[0].url)}`);
+                    const name = res[0].name ? `&name=${encodeURIComponent(res[0].name)}` : "";
+                    router.push(`/remap?fileUrl=${encodeURIComponent(res[0].url)}${name}`);
                 } else {
                     alert("Upload completed, but no file information received.");
                 }

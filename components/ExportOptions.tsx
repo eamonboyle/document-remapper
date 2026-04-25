@@ -1,15 +1,32 @@
-"use client";
-
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
+const formats = [
+    { name: "JSON", note: "Arrays or objects; good for APIs and archives." },
+    { name: "CSV / TSV", note: "Tabular exports; matches spreadsheet analysis workflows." },
+    { name: "JSON Lines", note: "One object per line; good for log-style or streaming inputs." },
+    { name: "YAML", note: "Human-readable; useful for config-shaped outputs." },
+    { name: "XML", note: "Vendor feeds and legacy systems; first sheet row becomes rows in tabular mode." },
+    { name: "Excel (.xlsx)", note: "From tabular or JSON object arrays; binary download." },
+];
+
 export function ExportOptions() {
-    // This is a placeholder. You'll need to implement the actual export logic.
     return (
-        <div>
-            <h2 className="text-xl font-semibold mb-4">Export Options</h2>
-            <Button onClick={() => console.log("Exporting...")}>Export as CSV</Button>
-            <Button onClick={() => console.log("Exporting...")}>Export as XML</Button>
-            {/* Add more export options as needed */}
+        <div className="space-y-6">
+            <ul className="list-inside list-disc space-y-2 text-sm text-muted-foreground">
+                {formats.map((f) => (
+                    <li key={f.name}>
+                        <strong className="text-foreground font-medium">{f.name}:</strong> {f.note}
+                    </li>
+                ))}
+            </ul>
+            <p className="text-sm text-muted-foreground">
+                Mappings are saved as JSON (Load / Save mapping on the map screen) so you can reapply the same vendor-to-internal field map
+                on every import run.
+            </p>
+            <Button asChild>
+                <Link href="/">Start mapping a file</Link>
+            </Button>
         </div>
     );
 }

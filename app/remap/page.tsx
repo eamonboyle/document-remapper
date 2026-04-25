@@ -1,20 +1,21 @@
-"use client";
+import { Suspense } from "react";
+import { RemapContent } from "./remap-content";
 
-import { useSearchParams } from 'next/navigation';
-import { DataMapper } from "@/components/DataMapper";
+function RemapFallback() {
+    return (
+        <div className="min-h-[40vh] text-muted-foreground" aria-busy>
+            Preparing…
+        </div>
+    );
+}
 
 export default function RemapPage() {
-    const searchParams = useSearchParams();
-    const fileUrl = searchParams.get('fileUrl');
-
     return (
-        <div className="container mx-auto px-4 py-8">
-            <h1 className="text-2xl font-bold mb-4">Remap Document</h1>
-            {fileUrl ? (
-                <DataMapper fileUrl={fileUrl} />
-            ) : (
-                <p>No file URL provided. Please upload a file first.</p>
-            )}
+        <div className="container max-w-6xl px-4 py-8">
+            <h1 className="mb-6 text-2xl font-bold tracking-tight">Map &amp; export</h1>
+            <Suspense fallback={<RemapFallback />}>
+                <RemapContent />
+            </Suspense>
         </div>
     );
 }
