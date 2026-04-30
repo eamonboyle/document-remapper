@@ -101,8 +101,8 @@ export function RemapContent() {
 
     if (loading) {
         return (
-            <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 rounded-2xl border border-border/60 bg-card/40 px-6 py-16 text-muted-foreground backdrop-blur-sm">
-                <Loader2 className="h-8 w-8 animate-spin text-brand" aria-hidden />
+            <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-muted-foreground">
+                <Loader2 className="h-7 w-7 animate-spin text-brand" aria-hidden />
                 <p className="text-sm font-medium">Loading file…</p>
             </div>
         );
@@ -110,15 +110,17 @@ export function RemapContent() {
 
     if (err) {
         return (
-            <div className="space-y-6 rounded-2xl border border-destructive/35 bg-destructive/5 px-6 py-8">
-                <p className="text-sm leading-relaxed text-destructive">{err}</p>
-                <div className="flex flex-wrap gap-3">
-                    <Button className="rounded-xl" asChild>
-                        <Link href="/">Home</Link>
-                    </Button>
-                    <Button variant="outline" className="rounded-xl" asChild>
-                        <Link href="/upload">Cloud upload</Link>
-                    </Button>
+            <div className="container max-w-2xl px-4 py-12">
+                <div className="rounded-2xl border border-destructive/30 bg-destructive/8 px-6 py-6">
+                    <p className="text-sm leading-relaxed text-destructive">{err}</p>
+                    <div className="mt-5 flex flex-wrap gap-3">
+                        <Button className="rounded-xl" asChild>
+                            <Link href="/">Home</Link>
+                        </Button>
+                        <Button variant="outline" className="rounded-xl" asChild>
+                            <Link href="/upload">Cloud upload</Link>
+                        </Button>
+                    </div>
                 </div>
             </div>
         );
@@ -134,17 +136,19 @@ export function RemapContent() {
 
     if (!fileUrl && !isLocal) {
         return (
-            <div className="space-y-6 rounded-2xl border border-border/60 bg-muted/20 px-6 py-10">
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                    No file in this session. Pick a file on the home page or use cloud upload.
-                </p>
-                <div className="flex flex-wrap gap-3">
-                    <Button className="rounded-xl" asChild>
-                        <Link href="/">Choose a file</Link>
-                    </Button>
-                    <Button variant="outline" className="rounded-xl" asChild>
-                        <Link href="/upload">Cloud upload</Link>
-                    </Button>
+            <div className="container max-w-2xl px-4 py-12">
+                <div className="rounded-2xl border border-white/[0.06] bg-card/40 px-6 py-10 backdrop-blur-sm">
+                    <p className="text-sm leading-relaxed text-muted-foreground">
+                        No file in this session. Pick a file on the home page or use cloud upload.
+                    </p>
+                    <div className="mt-5 flex flex-wrap gap-3">
+                        <Button className="rounded-xl" asChild>
+                            <Link href="/">Choose a file</Link>
+                        </Button>
+                        <Button variant="outline" className="rounded-xl" asChild>
+                            <Link href="/upload">Cloud upload</Link>
+                        </Button>
+                    </div>
                 </div>
             </div>
         );

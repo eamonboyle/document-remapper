@@ -5,81 +5,111 @@ import { usePathname } from "next/navigation";
 import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Layers, Upload } from "lucide-react";
+import { Layers } from "lucide-react";
 
-const nav = [
+const appNav = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/upload", label: "Cloud upload" },
     { href: "/export", label: "Formats" },
 ];
 
+const marketingNav = [
+    { href: "/", label: "Product" },
+    { href: "/export", label: "Pricing" },
+    { href: "/export", label: "Docs" },
+];
+
 export function AppHeader() {
     const pathname = usePathname();
+    const isLanding = pathname === "/";
 
     return (
-        <header className="sticky top-0 z-50 border-b border-border/60 bg-background/70 backdrop-blur-xl supports-[backdrop-filter]:bg-background/55">
-            <div className="container flex h-[3.25rem] max-w-6xl items-center justify-between gap-4 px-4">
-                <div className="flex min-w-0 flex-1 items-center gap-6 lg:gap-10">
+        <header className="sticky top-0 z-50 border-b border-white/[0.05] bg-background/75 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+            <div className="container flex h-[3.375rem] max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
+                {/* Logo */}
+                <div className="flex min-w-0 flex-1 items-center gap-6 lg:gap-8">
                     <Link
                         href="/"
-                        className="group flex shrink-0 items-center gap-2 text-[0.95rem] font-semibold tracking-tight text-foreground"
+                        className="group flex shrink-0 items-center gap-2.5 text-[0.9375rem] font-semibold tracking-tight text-foreground"
                     >
-                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand/15 text-brand ring-1 ring-brand/25 transition-colors group-hover:bg-brand/22">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand/15 text-brand ring-1 ring-brand/25 transition-all group-hover:bg-brand/20 group-hover:ring-brand/40">
                             <Layers className="h-4 w-4" aria-hidden />
                         </span>
                         <span className="hidden sm:inline">Data Remap</span>
                     </Link>
-                    <nav className="hidden items-center gap-1 sm:flex" aria-label="Main">
-                        {nav.map((item) => {
-                            const active = pathname === item.href || pathname?.startsWith(item.href + "/");
-                            return (
+
+                    {/* Nav */}
+                    {isLanding ? (
+                        <nav className="hidden items-center gap-0.5 md:flex" aria-label="Main">
+                            {marketingNav.map((item) => (
                                 <Link
-                                    key={item.href}
+                                    key={item.label}
                                     href={item.href}
-                                    className={cn(
-                                        "rounded-full px-3 py-1.5 text-[0.8125rem] font-medium transition-colors",
-                                        active
-                                            ? "bg-muted text-foreground shadow-sm ring-1 ring-border/80"
-                                            : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                                    )}
+                                    className="rounded-full px-3.5 py-1.5 text-[0.8125rem] font-medium text-muted-foreground transition-colors hover:text-foreground"
                                 >
                                     {item.label}
                                 </Link>
-                            );
-                        })}
-                    </nav>
+                            ))}
+                        </nav>
+                    ) : (
+                        <nav className="hidden items-center gap-0.5 sm:flex" aria-label="Main">
+                            {appNav.map((item) => {
+                                const active = pathname === item.href || pathname?.startsWith(item.href + "/");
+                                return (
+                                    <Link
+                                        key={item.href}
+                                        href={item.href}
+                                        className={cn(
+                                            "rounded-full px-3.5 py-1.5 text-[0.8125rem] font-medium transition-colors",
+                                            active
+                                                ? "bg-white/[0.06] text-foreground ring-1 ring-white/[0.08]"
+                                                : "text-muted-foreground hover:text-foreground"
+                                        )}
+                                    >
+                                        {item.label}
+                                    </Link>
+                                );
+                            })}
+                        </nav>
+                    )}
                 </div>
+
+                {/* Right side */}
                 <div className="flex items-center gap-2">
-                    <Button
-                        size="sm"
-                        className="hidden h-8 rounded-full px-4 shadow-[0_0_0_1px_hsl(var(--brand)/0.35)] sm:inline-flex"
-                        asChild
-                    >
-                        <Link href="/upload">
-                            <Upload className="mr-1.5 h-3.5 w-3.5 opacity-90" />
-                            New file
-                        </Link>
-                    </Button>
-                    <Button size="sm" variant="secondary" className="h-8 rounded-full px-3 sm:hidden" asChild>
-                        <Link href="/upload">New</Link>
-                    </Button>
                     <SignedOut>
                         <SignInButton mode="modal">
-                            <Button variant="ghost" size="sm" className="h-8 rounded-full px-3 text-muted-foreground">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 rounded-full px-4 text-[0.8125rem] text-muted-foreground hover:text-foreground"
+                            >
                                 Sign in
                             </Button>
                         </SignInButton>
                         <SignUpButton mode="modal">
-                            <Button size="sm" className="h-8 rounded-full px-3.5">
-                                Sign up
+                            <Button
+                                size="sm"
+                                className="h-8 rounded-full bg-brand px-4 text-[0.8125rem] font-semibold text-brand-foreground hover:bg-brand/90"
+                            >
+                                Create account
                             </Button>
                         </SignUpButton>
                     </SignedOut>
                     <SignedIn>
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            className="hidden h-8 rounded-full px-4 text-[0.8125rem] text-muted-foreground hover:text-foreground sm:inline-flex"
+                            asChild
+                        >
+                            <Link href="/">New remap</Link>
+                        </Button>
                         <UserButton
                             afterSignOutUrl="/"
                             appearance={{
-                                elements: { userButtonAvatarBox: "h-8 w-8 ring-2 ring-border/80" },
+                                elements: {
+                                    userButtonAvatarBox: "h-8 w-8 ring-1 ring-white/10",
+                                },
                             }}
                         />
                     </SignedIn>

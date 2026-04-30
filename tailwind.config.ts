@@ -8,6 +8,9 @@ const config: Config = {
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
+    container: {
+      center: true,
+    },
   	extend: {
   		fontFamily: {
   			sans: ["var(--font-outfit)", "system-ui", "sans-serif"],
