@@ -1,0 +1,5 @@
+cust_id,email,given_name,family_name,phone_dept_extension,signup_date,active
+101,alice.anderson@example.com,Alice,Anderson,+1-415-555-0101 ext 221,2024-01-15,true
+102,bob.bravo@example.com,Bob,Bravo,+44-20-7946-0888,2024-03-22,true
+103,carmen.cursor@example.com,Carmen,Cursor,,2024-07-08,false
+104,diego.dev@example.com,Diego,Dev,+81-3-5550-7744,2025-11-30,true

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<customerExport batchId="B-APR-2026" sourceSystem="CRM-LEGACY">
+  <customers>
+    <customer legacyId="C-901">
+      <emailAddress>sage.symons@example.com</emailAddress>
+      <firstname>Sage</firstname>
+      <lastname>Symons</lastname>
+      <phone>03-9642-8871</phone>
+      <signup>2025-05-05</signup>
+      <vip>false</vip>
+    </customer>
+    <customer legacyId="C-902">
+      <emailAddress>teagan.tulloch@example.com</emailAddress>
+      <firstname>Teagan</firstname>
+      <lastname>Tulloch</lastname>
+      <phone/>
+      <signup>2025-09-01</signup>
+      <vip>true</vip>
+    </customer>
+  </customers>
+</customerExport>
