@@ -329,33 +329,37 @@ export function DataMapper({ initialText, fileLabel, fileUrl, initialParsed }: D
     }, [applyParsed]);
 
     if (error && !parsed) {
-        return <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-destructive">{error}</div>;
+        return (
+            <div className="rounded-2xl border border-destructive/40 bg-destructive/10 px-5 py-4 text-sm text-destructive">{error}</div>
+        );
     }
 
     return (
         <div
             className={cn(
-                "flex min-h-0 flex-col gap-6 rounded-xl border p-4 sm:p-6",
-                darkMode ? "border-border bg-zinc-950/40 text-zinc-100" : "border-zinc-200 bg-white text-zinc-900"
+                "flex min-h-0 flex-col gap-6 rounded-2xl border p-5 shadow-xl shadow-black/25 ring-1 ring-white/[0.04] backdrop-blur-md sm:p-7",
+                darkMode
+                    ? "border-border/70 bg-card/55 text-foreground"
+                    : "border-border/60 bg-card text-foreground"
             )}
         >
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Map & export</h1>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        {activeFileName}
-                        {fileUrl ? " · from upload" : " · local"}
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="min-w-0 space-y-1">
+                    <p className="truncate text-lg font-semibold tracking-tight">{activeFileName}</p>
+                    <p className="text-xs text-muted-foreground">
+                        {fileUrl ? "Cloud upload" : "Local"}
+                        {summary ? " · " : ""}
+                        {summary && (
+                            <span className="inline-flex items-center gap-1.5 align-middle">
+                                {summary.icon === "tabular" ? (
+                                    <Table2 className="inline h-3.5 w-3.5 shrink-0" aria-hidden />
+                                ) : (
+                                    <FileJson className="inline h-3.5 w-3.5 shrink-0" aria-hidden />
+                                )}
+                                {summary.title}
+                            </span>
+                        )}
                     </p>
-                    {summary && (
-                        <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-                            {summary.icon === "tabular" ? (
-                                <Table2 className="h-4 w-4 shrink-0" aria-hidden />
-                            ) : (
-                                <FileJson className="h-4 w-4 shrink-0" aria-hidden />
-                            )}
-                            {summary.title}
-                        </p>
-                    )}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                     <Button
@@ -397,7 +401,9 @@ export function DataMapper({ initialText, fileLabel, fileUrl, initialParsed }: D
                 </div>
             </div>
 
-            {error && <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">{error}</div>}
+            {error && (
+                <div className="rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">{error}</div>
+            )}
 
             <div className="grid gap-4 lg:grid-cols-2">
                 <div className="space-y-2">
@@ -420,8 +426,8 @@ export function DataMapper({ initialText, fileLabel, fileUrl, initialParsed }: D
                     </div>
                     <pre
                         className={cn(
-                            "max-h-72 overflow-auto rounded-lg p-3 text-xs leading-relaxed",
-                            darkMode ? "bg-zinc-900" : "bg-zinc-100"
+                            "max-h-72 overflow-auto rounded-xl border p-3 font-mono text-[0.6875rem] leading-relaxed",
+                            darkMode ? "border-border/50 bg-background/60" : "border-border bg-muted/50"
                         )}
                     >
                         {sourceDisplay}
@@ -438,8 +444,8 @@ export function DataMapper({ initialText, fileLabel, fileUrl, initialParsed }: D
                                 value={exportFormat}
                                 onChange={(e) => setExportFormat(e.target.value as ExportFormat)}
                                 className={cn(
-                                    "mt-1.5 w-full rounded-md border px-3 py-2 text-sm",
-                                    darkMode ? "border-zinc-700 bg-zinc-900 text-zinc-100" : "border-zinc-200 bg-white"
+                                    "mt-1.5 w-full rounded-xl border px-3 py-2.5 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                    darkMode ? "border-border/60 bg-background/60" : "border-border bg-background"
                                 )}
                             >
                                 {EXPORT_FORMATS.map((f) => (
@@ -453,8 +459,8 @@ export function DataMapper({ initialText, fileLabel, fileUrl, initialParsed }: D
                     <h2 className="text-sm font-medium">Preview (target format)</h2>
                     <pre
                         className={cn(
-                            "max-h-72 overflow-auto rounded-lg p-3 text-xs leading-relaxed",
-                            darkMode ? "bg-zinc-900" : "bg-zinc-100"
+                            "max-h-72 overflow-auto rounded-xl border p-3 font-mono text-[0.6875rem] leading-relaxed",
+                            darkMode ? "border-border/50 bg-background/60" : "border-border bg-muted/50"
                         )}
                     >
                         {preview || "—"}
@@ -472,9 +478,11 @@ export function DataMapper({ initialText, fileLabel, fileUrl, initialParsed }: D
             <div>
                 <h2 className="mb-3 text-sm font-medium">Field mapping</h2>
                 <p className="mb-3 text-xs text-muted-foreground">
-                    <strong>Tabular:</strong> target column name per source column. <strong>JSON / XML:</strong> set a dot path (e.g.{" "}
-                    <code className="rounded bg-zinc-800 px-1">customer.id</code>); arrays use numeric segments (e.g.{" "}
-                    <code className="rounded bg-zinc-800 px-1">items.0.sku</code>). Leave target empty to keep the same name.
+                    <strong>Tabular:</strong> target column name per source column.                     <strong>JSON / XML:</strong> set a dot path (e.g.{" "}
+                    <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[0.65rem]">customer.id</code>); arrays use numeric
+                    segments (e.g.{" "}
+                    <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[0.65rem]">items.0.sku</code>). Leave target empty to
+                    keep the same name.
                 </p>
                 <input
                     type="search"
@@ -482,13 +490,13 @@ export function DataMapper({ initialText, fileLabel, fileUrl, initialParsed }: D
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className={cn(
-                        "mb-3 w-full rounded-md border px-3 py-2 text-sm",
-                        darkMode ? "border-zinc-700 bg-zinc-900" : "border-zinc-200"
+                        "mb-3 w-full rounded-xl border px-3 py-2.5 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        darkMode ? "border-border/60 bg-background/60" : "border-border bg-background"
                     )}
                 />
-                <div className="max-h-[min(50vh,28rem)] overflow-auto rounded-lg border border-border/50">
+                <div className="max-h-[min(50vh,28rem)] overflow-auto rounded-xl border border-border/60">
                     <table className="w-full min-w-[280px] text-left text-sm">
-                        <thead className="sticky top-0 bg-inherit text-xs text-muted-foreground">
+                        <thead className="sticky top-0 z-[1] bg-muted/90 text-xs text-muted-foreground backdrop-blur-sm">
                             <tr>
                                 <th className="border-b px-2 py-2">Source</th>
                                 <th className="border-b px-2 py-2">Target (export name / path)</th>
@@ -496,9 +504,9 @@ export function DataMapper({ initialText, fileLabel, fileUrl, initialParsed }: D
                         </thead>
                         <tbody>
                             {filtered.map((mapping) => (
-                                <tr key={mapping.original} className="border-b border-border/30 last:border-0">
-                                    <td className="break-all px-2 py-1.5 font-mono text-xs">{mapping.original}</td>
-                                    <td className="px-2 py-1.5">
+                                <tr key={mapping.original} className="border-b border-border/40 transition-colors hover:bg-muted/30 last:border-0">
+                                    <td className="break-all px-3 py-2 font-mono text-[0.6875rem] text-muted-foreground">{mapping.original}</td>
+                                    <td className="px-3 py-2">
                                         <input
                                             type="text"
                                             title={`Map ${mapping.original}`}
@@ -506,8 +514,8 @@ export function DataMapper({ initialText, fileLabel, fileUrl, initialParsed }: D
                                             placeholder={mapping.original}
                                             onChange={(e) => setRemapForOriginal(mapping.original, e.target.value)}
                                             className={cn(
-                                                "w-full min-w-0 rounded border px-2 py-1.5 text-xs",
-                                                darkMode ? "border-zinc-600 bg-zinc-900" : "border-zinc-300"
+                                                "w-full min-w-0 rounded-lg border px-2.5 py-2 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                                darkMode ? "border-border/60 bg-background/50" : "border-border bg-background"
                                             )}
                                         />
                                     </td>
