@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { DataMapper } from "@/components/DataMapper";
 import { Loader2 } from "lucide-react";
-import { takeRemapSession } from "@/lib/remapSession";
+import { getRemapSession } from "@/lib/remapSession";
 import type { ParsedData } from "@/lib/etl";
 import { parseArrayBuffer } from "@/lib/etl";
 
@@ -64,7 +64,7 @@ export function RemapContent() {
             setErr(null);
             setPreParsed(null);
             setFromUrl(undefined);
-            const s = takeRemapSession();
+            const s = getRemapSession();
             if (!s) {
                 setErr("No file in session. Choose a file from the home page, or use Replace file below after opening this page with data.");
                 setText("");
