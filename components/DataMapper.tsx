@@ -471,7 +471,7 @@ export function DataMapper({ initialText, fileLabel, fileUrl, initialParsed }: D
                                     Fields ({parsed.headers.length})
                                 </p>
                                 <div className="space-y-0.5">
-                                    {parsed.headers.map((h, i) => {
+                                    {parsed.headers.map((h) => {
                                         const sampleVal = parsed.rows[0]?.[h];
                                         const type = guessType(sampleVal);
                                         return (

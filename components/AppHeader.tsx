@@ -15,8 +15,8 @@ const appNav = [
 
 const marketingNav = [
     { href: "/", label: "Product" },
-    { href: "/export", label: "Pricing" },
-    { href: "/export", label: "Docs" },
+    { href: "/pricing", label: "Pricing" },
+    { href: "/docs", label: "Docs" },
 ];
 
 export function AppHeader() {

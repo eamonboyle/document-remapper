@@ -422,7 +422,9 @@ export default function Home() {
                                     </div>
                                 </div>
                                 <p className="mt-4 text-center text-[0.7rem] text-muted-foreground/60">
-                                    View all presets →
+                                    <Link href="/presets" className="text-brand hover:underline">
+                                        View all presets →
+                                    </Link>
                                 </p>
                             </div>
 

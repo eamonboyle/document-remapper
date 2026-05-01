@@ -2,24 +2,20 @@
 
 import { useAuth, SignInButton, useUser } from "@clerk/nextjs";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
     ArrowRight,
     FileStack,
     Cloud,
     LayoutTemplate,
-    Clock,
-    Star,
     Activity,
     Settings,
     Home,
     Files,
     FolderOpen,
-    Download,
     Upload,
-    RefreshCw,
     CheckCircle2,
-    AlertCircle,
     Zap,
     ExternalLink,
 } from "lucide-react";
@@ -29,8 +25,8 @@ const sideNav = [
     { href: "/dashboard", icon: Home, label: "Home" },
     { href: "/", icon: FileStack, label: "Mappings" },
     { href: "/upload", icon: Files, label: "Connectors" },
-    { href: "/export", icon: FolderOpen, label: "Presets" },
-    { href: "/dashboard", icon: Settings, label: "Settings" },
+    { href: "/presets", icon: FolderOpen, label: "Presets" },
+    { href: "/settings", icon: Settings, label: "Settings" },
 ];
 
 const recentDocs = [
@@ -86,7 +82,14 @@ function ConnIcon({ icon }: { icon: string }) {
     );
 }
 
+function navItemActive(pathname: string | null, href: string) {
+    if (!pathname) return false;
+    if (href === "/") return pathname === "/";
+    return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 export default function Dashboard() {
+    const pathname = usePathname();
     const { isSignedIn } = useAuth();
     const { user } = useUser();
     const firstName = user?.firstName ?? "Alex";
@@ -131,7 +134,7 @@ export default function Dashboard() {
                             href={href}
                             className={cn(
                                 "mb-0.5 flex items-center gap-3 rounded-lg px-3 py-2.5 text-[0.8125rem] font-medium transition-colors",
-                                label === "Home"
+                                navItemActive(pathname, href)
                                     ? "bg-brand/10 text-brand"
                                     : "text-muted-foreground hover:bg-white/[0.04] hover:text-foreground"
                             )}
@@ -174,7 +177,7 @@ export default function Dashboard() {
                         {[
                             { href: "/", icon: FileStack, label: "Map a file", desc: "Upload or pick a file · CSV, JSON, XML, Excel…", accent: true },
                             { href: "/upload", icon: Cloud, label: "Cloud upload", desc: "Import from cloud storage · S3, GCS, Dropbox…", accent: false },
-                            { href: "/export", icon: LayoutTemplate, label: "Use a preset", desc: "Start from a saved mapping. Save time and ship faster.", accent: false },
+                            { href: "/presets", icon: LayoutTemplate, label: "Use a preset", desc: "Start from a saved mapping. Save time and ship faster.", accent: false },
                         ].map(({ href, icon: Icon, label, desc, accent }) => (
                             <Link
                                 key={label}
@@ -291,7 +294,7 @@ export default function Dashboard() {
                                     <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
                                         Learn how to build complex mappings with nested paths, transformations, and conditional logic.
                                     </p>
-                                    <Link href="/export" className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline">
+                                    <Link href="/docs" className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline">
                                         Open docs <ExternalLink className="h-3 w-3" />
                                     </Link>
                                 </div>
