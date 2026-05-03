@@ -10,15 +10,13 @@ const auth = (req: Request) => ({ id: "fakeId" }); // Fake auth function
 export const ourFileRouter = {
     // Define a new route for CSV and XML uploads
     documentUploader: f({
-        "text/csv": {
-            maxFileSize: "4MB",
-        },
-        "text/xml": {
-            maxFileSize: "4MB",
-        },
-        "application/xml": {
-            maxFileSize: "4MB",
-        },
+        "text/csv": { maxFileSize: "8MB" },
+        "text/tab-separated-values": { maxFileSize: "8MB" },
+        "text/plain": { maxFileSize: "8MB" },
+        "text/xml": { maxFileSize: "8MB" },
+        "application/xml": { maxFileSize: "8MB" },
+        "application/json": { maxFileSize: "8MB" },
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": { maxFileSize: "8MB" },
     })
         .middleware(async ({ req }) => {
             // This code runs on your server before upload

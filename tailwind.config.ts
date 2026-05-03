@@ -8,8 +8,19 @@ const config: Config = {
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
+    container: {
+      center: true,
+    },
   	extend: {
+  		fontFamily: {
+  			sans: ["var(--font-outfit)", "system-ui", "sans-serif"],
+  		},
   		colors: {
+  			brand: {
+  				DEFAULT: "hsl(var(--brand))",
+  				muted: "hsl(var(--brand-muted))",
+  				foreground: "hsl(var(--brand-foreground))",
+  			},
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {
